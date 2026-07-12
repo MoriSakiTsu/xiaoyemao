@@ -3,38 +3,234 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Hey 为您邂逅</title>
+  <title>验证您已满18岁</title>
   <style>
-    /* === 基础样式（仿手机壳） === */
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      background:#111;
-      display:flex; justify-content:center; align-items:center;
-      min-height:100vh; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      background:#111; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
     }
-    .phone-shell { width:100%; max-width:430px; padding:12px; }
-    .phone-frame {
-      background:#000; border-radius:44px; padding:12px 6px; position:relative;
-      box-shadow: 0 0 0 2px #333, 0 0 0 6px #1a1a1a, 0 0 30px rgba(0,0,0,0.8);
+    #qa-card {
+      background:#1c1c1e; border-radius:24px; padding:24px 20px;
+      width:90%; max-width:380px; box-shadow:0 0 30px rgba(255,64,129,0.15);
     }
-    .phone-side-button {
-      position:absolute; background:#1a1a1a; width:4px; border-radius:4px; z-index:10;
+    .progress-text { font-size:13px; color:#999; margin-bottom:8px; }
+    .progress-bar { background:#333; height:6px; border-radius:3px; margin-bottom:24px; overflow:hidden; }
+    .progress-bar span { display:block; height:100%; width:0%; background:#ff4081; transition:width 0.3s; }
+    #qTitle { font-size:22px; font-weight:bold; color:#fff; margin-bottom:12px; }
+    #qDesc { font-size:15px; color:#aaa; margin-bottom:22px; white-space:pre-line; }
+    .options { display:flex; flex-direction:column; gap:10px; }
+    .option {
+      background:#2c2c2e; padding:14px; border-radius:12px;
+      text-align:center; font-weight:bold; color:#fff; cursor:pointer;
+      transition: background 0.2s;
     }
-    .phone-side-button--mute { top:120px; left:-2px; height:30px; }
-    .phone-side-button--volume-up { top:160px; left:-2px; height:50px; }
-    .phone-side-button--volume-down { top:220px; left:-2px; height:50px; }
-    .phone-side-button--power { top:180px; right:-2px; height:60px; }
-    .phone-island {
-      width:90px; height:25px; background:#000; border-radius:20px;
-      margin:0 auto 12px; position:relative; z-index:5;
+    .option:active { background:#ff4081; }
+    .img-options { display:flex; gap:10px; }
+    .img-option { flex:1; border-radius:12px; overflow:hidden; cursor:pointer; }
+    .img-option img { width:100%; display:block; }
+    /* 倒计时条 */
+    .countdown-bar { background:#333; height:8px; border-radius:4px; margin-top:10px; }
+    .countdown-bar span { display:block; width:0%; height:100%; background:#ff4081; border-radius:4px; transition:width 1.8s linear; }
+    /* 错误弹窗 */
+    #popup {
+      position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7);
+      display:none; align-items:center; justify-content:center;
     }
-    .phone-screen {
-      background: #1c1c1e; border-radius:32px; overflow:hidden;
-      color:#fff; min-height:700px; position:relative;
-      display:flex; flex-direction:column;
+    .popup-box {
+      background:#1c1c1e; border-radius:20px; padding:24px;
+      text-align:center; width:80%; max-width:300px;
     }
-    /* === 内容区 === */
-    .hero {
+    .popup-box h2 { color:#ff4081; margin-bottom:10px; }
+    .popup-box button {
+      background:#ff4081; border:none; color:#fff; padding:10px 30px;
+      border-radius:20px; margin-top:14px; font-size:16px; cursor:pointer;
+    }
+    /* 最终朋友头像弹窗 */
+    #friend-reveal {
+      position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.92);
+      display:none; align-items:center; justify-content:center;
+    }
+    .reveal-box {
+      text-align:center; padding:20px;
+    }
+    .reveal-box img {
+      width:200px; height:200px; border-radius:50%; border:4px solid #ff4081;
+      object-fit:cover; margin-bottom:20px;
+    }
+    .reveal-box h2 { color:#ff4081; font-size:28px; margin-bottom:10px; }
+    .reveal-box p { color:#fff; font-size:20px; }
+  </style>
+</head>
+<body>
+
+  <!-- 问答卡片 -->
+  <div id="qa-card">
+    <div class="progress-text" id="progressText"></div>
+    <div class="progress-bar"><span id="progressBar"></span></div>
+    <h1 id="qTitle"></h1>
+    <p id="qDesc"></p>
+    <div id="qOptions"></div>
+  </div>
+
+  <!-- 答题错误弹窗 -->
+  <div id="popup">
+    <div class="popup-box">
+      <h2>❌ 答题不符合要求</h2>
+      <p>请重新答题</p>
+      <button onclick="restart()">重新答题</button>
+    </div>
+  </div>
+
+  <!-- 最终恶搞弹窗（朋友头像） -->
+  <div id="friend-reveal">
+    <div class="reveal-box">
+      <img src="friend.jpg" alt="你的朋友" id="friend-img"
+           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23333%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23fff%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2218%22%3E朋友头像缺失%3C/text%3E%3C/svg%3E'">
+      <h2>🎉 恭喜你 🎉</h2>
+      <p>系统已为您匹配到 <strong id="friend-name" style="color:#ff4081;">[朋友名字]</strong></p>
+    </div>
+  </div>
+
+  <script>
+    // 问答数据（可随意修改问题文案和选项）
+    var questions = [
+      {
+        q: "温馨提示",
+        d: "你即将看到当地寻找约会或兼职的女孩，您能否保密不泄露女孩隐私？\n\n约会之前，我们需要问几个简短问题",
+        ok: [0,1],
+        a: ["好的","我不愿意"]
+      },
+      { q: "你是否已满23岁？", d: "仅限成年人", ok: [0,1], a: ["是","否"] },
+      { q: "您是否有约炮需求？", d: "请选择", ok: [0,1], a: ["是","否"] },
+      { q: "能否接受只进入身体，不介入生活？", d: "请选择", ok: [0,1], a: ["可以","不接受"] },
+      { q: "你更想认识哪类？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/r1.js","/BL-JS-52/uploads/r2.js"] },
+      { q: "你更喜欢哪种奶子？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/t1.js","/BL-JS-52/uploads/t2.js"] },
+      { q: "你更偏好哪种逼型？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/b1.js","/BL-JS-52/uploads/b2.js"] },
+      { q: "您所在地区有68 位性感女性正在等着与您见面！", d: "下载APP后即可寻找你心中的妹妹", ok: [0,1], a: ["继续","退出"] }
+    ];
+
+    var qi = 0;
+    var qTitle = document.getElementById("qTitle");
+    var qDesc = document.getElementById("qDesc");
+    var qOptions = document.getElementById("qOptions");
+    var progressBar = document.getElementById("progr<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>验证您已满18岁</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:#111; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+    }
+    #qa-card {
+      background:#1c1c1e; border-radius:24px; padding:24px 20px;
+      width:90%; max-width:380px; box-shadow:0 0 30px rgba(255,64,129,0.15);
+    }
+    .progress-text { font-size:13px; color:#999; margin-bottom:8px; }
+    .progress-bar { background:#333; height:6px; border-radius:3px; margin-bottom:24px; overflow:hidden; }
+    .progress-bar span { display:block; height:100%; width:0%; background:#ff4081; transition:width 0.3s; }
+    #qTitle { font-size:22px; font-weight:bold; color:#fff; margin-bottom:12px; }
+    #qDesc { font-size:15px; color:#aaa; margin-bottom:22px; white-space:pre-line; }
+    .options { display:flex; flex-direction:column; gap:10px; }
+    .option {
+      background:#2c2c2e; padding:14px; border-radius:12px;
+      text-align:center; font-weight:bold; color:#fff; cursor:pointer;
+      transition: background 0.2s;
+    }
+    .option:active { background:#ff4081; }
+    .img-options { display:flex; gap:10px; }
+    .img-option { flex:1; border-radius:12px; overflow:hidden; cursor:pointer; }
+    .img-option img { width:100%; display:block; }
+    /* 倒计时条 */
+    .countdown-bar { background:#333; height:8px; border-radius:4px; margin-top:10px; }
+    .countdown-bar span { display:block; width:0%; height:100%; background:#ff4081; border-radius:4px; transition:width 1.8s linear; }
+    /* 错误弹窗 */
+    #popup {
+      position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7);
+      display:none; align-items:center; justify-content:center;
+    }
+    .popup-box {
+      background:#1c1c1e; border-radius:20px; padding:24px;
+      text-align:center; width:80%; max-width:300px;
+    }
+    .popup-box h2 { color:#ff4081; margin-bottom:10px; }
+    .popup-box button {
+      background:#ff4081; border:none; color:#fff; padding:10px 30px;
+      border-radius:20px; margin-top:14px; font-size:16px; cursor:pointer;
+    }
+    /* 最终朋友头像弹窗 */
+    #friend-reveal {
+      position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.92);
+      display:none; align-items:center; justify-content:center;
+    }
+    .reveal-box {
+      text-align:center; padding:20px;
+    }
+    .reveal-box img {
+      width:200px; height:200px; border-radius:50%; border:4px solid #ff4081;
+      object-fit:cover; margin-bottom:20px;
+    }
+    .reveal-box h2 { color:#ff4081; font-size:28px; margin-bottom:10px; }
+    .reveal-box p { color:#fff; font-size:20px; }
+  </style>
+</head>
+<body>
+
+  <!-- 问答卡片 -->
+  <div id="qa-card">
+    <div class="progress-text" id="progressText"></div>
+    <div class="progress-bar"><span id="progressBar"></span></div>
+    <h1 id="qTitle"></h1>
+    <p id="qDesc"></p>
+    <div id="qOptions"></div>
+  </div>
+
+  <!-- 答题错误弹窗 -->
+  <div id="popup">
+    <div class="popup-box">
+      <h2>❌ 答题不符合要求</h2>
+      <p>请重新答题</p>
+      <button onclick="restart()">重新答题</button>
+    </div>
+  </div>
+
+  <!-- 最终恶搞弹窗（朋友头像） -->
+  <div id="friend-reveal">
+    <div class="reveal-box">
+      <img src="friend.jpg" alt="你的朋友" id="friend-img"
+           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23333%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23fff%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2218%22%3E朋友头像缺失%3C/text%3E%3C/svg%3E'">
+      <h2>🎉 恭喜你 🎉</h2>
+      <p>系统已为您匹配到 <strong id="friend-name" style="color:#ff4081;">[朋友名字]</strong></p>
+    </div>
+  </div>
+
+  <script>
+    // 问答数据（可随意修改问题文案和选项）
+    var questions = [
+      {
+        q: "温馨提示",
+        d: "你即将看到当地寻找约会或兼职的女孩，您能否保密不泄露女孩隐私？\n\n约会之前，我们需要问几个简短问题",
+        ok: [0,1],
+        a: ["好的","我不愿意"]
+      },
+      { q: "你是否已满23岁？", d: "仅限成年人", ok: [0,1], a: ["是","否"] },
+      { q: "您是否有约炮需求？", d: "请选择", ok: [0,1], a: ["是","否"] },
+      { q: "能否接受只进入身体，不介入生活？", d: "请选择", ok: [0,1], a: ["可以","不接受"] },
+      { q: "你更想认识哪类？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/r1.js","/BL-JS-52/uploads/r2.js"] },
+      { q: "你更喜欢哪种奶子？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/t1.js","/BL-JS-52/uploads/t2.js"] },
+      { q: "你更偏好哪种逼型？", d: "请选择", type:"img", ok: [0,1], imgs: ["/BL-JS-52/uploads/b1.js","/BL-JS-52/uploads/b2.js"] },
+      { q: "您所在地区有68 位性感女性正在等着与您见面！", d: "下载APP后即可寻找你心中的妹妹", ok: [0,1], a: ["继续","退出"] }
+    ];
+
+    var qi = 0;
+    var qTitle = document.getElementById("qTitle");
+    var qDesc = document.getElementById("qDesc");
+    var qOptions = document.getElementById("qOptions");
+    var progressBar = document.getElementById("progr    .hero {
       text-align:center; padding:30px 20px 20px;
       background: linear-gradient(135deg, #2d0b1a, #1c1c1e);
     }
